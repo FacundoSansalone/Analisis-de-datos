@@ -43,7 +43,10 @@
 - **Nulos:** ~60-62 (~5%)
 - **Tipo de faltante:** Aleatorio (MAR — Missing At Random)
 - **Causa:** Registros que no completaron los campos temporales, probablemente ingresados de forma incompleta.
-- **Tratamiento:** `day` puede recuperarse a partir de `date` (conversion a datetime y extraccion del dia de la semana). `quarter` puede derivarse del mes. Los nulos restantes no afectan el modelo predictivo.
+- **Tratamiento aplicado:**
+  - **`day`**: recuperado a partir de `date` usando `dt.dayofweek` de pandas. Se recuperaron los valores faltantes en todas las filas que tenian `date` presente.
+  - **`quarter`**: derivado a partir del **dia del mes** de `date`, ya que `quarter` representa la semana dentro del mes (no el trimestre del año). Criterio: dias 1–7 → Quarter1, dias 8–14 → Quarter2, dias 15–21 → Quarter3, dias 22+ → Quarter4. Se recuperaron 55 valores; quedaron 5 nulos en filas donde `date` tambien era nulo.
+  - **`date`**: las filas con `date` nulo se conservan como `NaT`. `date` no es predictor directo de `actual_productivity` — su unico rol es derivar `day` y `quarter`. Conservar las filas evita perdida de datos sin introducir fechas inferidas.
 
 ---
 
@@ -131,7 +134,10 @@
 - **Nulos:** 60 (4.97%)
 - **Tipo de faltante:** Aleatorio
 - **Causa:** Productividad no medida o no reportada para ese equipo y dia.
-- **Tratamiento:** Eliminar las filas sin productividad real. Es la variable objetivo del modelo — sin ella la fila es inutilizable para entrenamiento y evaluacion.
+- **Tratamiento:** Eliminar las filas con valor nulo. Es la variable objetivo — sin ella la fila es inutilizable.
+- **Valores fuera de rango [0,1]:** Se detectaron 43 registros con valores invalidos:
+  - 11 registros con valor `11.204375` (error extremo, probable fallo del sistema): **eliminados**, ya que al ser la variable objetivo no es posible imputarlos de forma confiable.
+  - 32 registros con valores entre `(1, 1.2]` (leve desborde, probable error de redondeo): **recortados a 1.0** con `clip(upper=1.0)`.
 
 ---
 
@@ -141,8 +147,11 @@ La coincidencia de ~60 nulos en casi todas las columnas sugiere la existencia de
 
 ```
 Filas originales:           1207
-Filas tras limpieza:        1024
-Filas eliminadas:            183  (15.2%)
+Filas tras limpieza:        1013
+Filas eliminadas:            194  (16.1%)
+  - Por team/department/actual_productivity nulos: ~183
+  - Por actual_productivity > 1.2 (error extremo):  11
+  - Valores recortados a 1.0 (entre 1 y 1.2):       32
 ```
 
 ---
@@ -154,4 +163,5 @@ Filas eliminadas:            183  (15.2%)
 | Imputar con `0` | `wip` (finishing), `incentive`, `idle_time`, `idle_men`, `no_of_style_change` | Faltante = ausencia del fenomeno |
 | Mediana por grupo | `wip` (sewing por equipo), `targeted_productivity` (por depto+dia), `no_of_workers` (por equipo), `smv` (por depto), `over_time` (por depto) | Preserva la variabilidad real del grupo |
 | Eliminacion de fila | `actual_productivity`, `team`, `department` | Columnas criticas sin las cuales la fila no aporta informacion util |
-| No imputar | `date`, `quarter`, `day` (residuales) | No se usan como predictores en el modelo |
+| Derivar desde `date` | `day` (via `dt.dayofweek`), `quarter` (via dia del mes: 1-7→Q1, 8-14→Q2, 15-21→Q3, 22+→Q4) | Recuperables computacionalmente sin introducir informacion falsa |
+| Conservar como NaT | `date` | No es predictor directo; `day` y `quarter` ya derivados; sin perdida de filas |
