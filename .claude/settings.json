@@ -1,0 +1,12 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(jupyter nbconvert *)",
+      "Bash(git -C /Users/azaelpignanessi/UM/A.Datos/Analisis-de-datos status)",
+      "Bash(git -C /Users/azaelpignanessi/UM/A.Datos/Analisis-de-datos log --oneline -4)",
+      "Bash(git add *)",
+      "Bash(git -C /Users/azaelpignanessi/UM/A.Datos/Analisis-de-datos commit -m ' *)",
+      "Bash(git push *)"
+    ]
+  }
+}
